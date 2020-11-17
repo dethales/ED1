@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+// a proxima linha esta incluida no arquivo Fila.h
+// #define TAM_MAX_FILA 6
+
 int main(void)
 {
     Aluno* Joao = criaAluno("Joao", 123);
@@ -39,17 +42,18 @@ int main(void)
     insereFila(f, Penetra);
 
     printf("\nRetirando um aluno da fila\n");
-    retiraFila(f);
+    Aluno* alunoRetirado1 = retiraFila(f);
     imprimeFila(f);
 
     printf("\nRetirando mais tres aluno da fila\n");
-    retiraFila(f);
-    retiraFila(f);
-    retiraFila(f);
+    Aluno* alunoRetirado2 = retiraFila(f);
+    Aluno* alunoRetirado3 = retiraFila(f);
+    Aluno* alunoRetirado4 = retiraFila(f);
     imprimeFila(f);
 
-    printf("\nAdicionando um aluno retirado ao final da fila\n");
-    insereFila(f, Paula);
+    printf("\nAdicionando dois aluno retirados ao final da fila\n");
+    insereFila(f, alunoRetirado2);
+    insereFila(f, alunoRetirado4);
     imprimeFila(f);
 
     // libera memoria
