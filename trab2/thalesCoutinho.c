@@ -1,25 +1,39 @@
+#include "arv.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "string.h"
+#include <string.h>
 
 // armazena o conetudo do arquivo no vetor de strings 'linhas'
 // e retorna o numero de linhas do arquivo
 int leArquivo(char*** linhas, char* nomeArquivoEntrada);
+
 
 int main(void)
 {
     char** expressoes;
     int numeroLinhas = leArquivo(&expressoes, "entrada.txt");
 
+/* impressao das strings
+    for(int i = 0;  i < numeroLinhas; i++)
+    {
+        printf("%s\n", expressoes[i]);
+    }
+*/
 
-    for(int i = 0; i < numero)
+    parsing(expressoes[0]);
+
+    for (int i = 0; i < numeroLinhas; i++)
+    {
+        free(expressoes[i]);
+    }
     free(expressoes);
 }
 
 int leArquivo(char*** linhas, char* nomeArquivoEntrada)
 {
     // tamanho inicial do vetor de strings que armazena as linhas do arquivo
-    size_t tamanhoVetorExpressoes = 10;
+    size_t tamanhoVetorExpressoes = 1;
 
     // buffer que armazena cada linha lida
     char* bufferLinha = NULL;
@@ -36,7 +50,7 @@ int leArquivo(char*** linhas, char* nomeArquivoEntrada)
     // aloca o vetor de strings que armazena as linhas lidas
     char** expressoes = (char**) malloc(tamanhoVetorExpressoes * sizeof(char*));
 
-    if(expressoes == NULL)
+    if (expressoes == NULL)
     {
         perror("Erro de alocacao");
         exit(EXIT_FAILURE);
@@ -46,53 +60,58 @@ int leArquivo(char*** linhas, char* nomeArquivoEntrada)
     FILE* arquivoEntrada = fopen(nomeArquivoEntrada, "r");
 
     // testa se a abertura do arquivo foi bem sucedida
-    if(arquivoEntrada == NULL)
+    if (arquivoEntrada == NULL)
     {
         perror(nomeArquivoEntrada);
         exit(EXIT_FAILURE);
     }
 
-    do
+    // a funcao getline() le a linha, armazena no buffer e retorna o numero
+    // de caracteres na linha, retorna -1 quando terminar o arquivo
+    while (tamanhoLinha = getline(&bufferLinha, &tamanhoBufferLinha, arquivoEntrada) != -1)
     {
-        // le uma linha usando getline(), a propria funcao determina
-        // o tamanho do buffer, retorna -1 quando detecta EOF
-        tamanhoLinha = getline(&bufferLinha, &tamanhoBufferLinha, arquivoEntrada);
-
         // o numero de linhas lidas ultrapassou o numero de linhas alocadas
         // para o vetor de strings expressoes. realocando uma quantidade
         // maior de linhas
-        if(contagemLinhas >= tamanhoVetorExpressoes)
+        if (contagemLinhas >= tamanhoVetorExpressoes)
         {
             tamanhoVetorExpressoes += tamanhoVetorExpressoes;
     
             // realoca para uma variavel temporaria para testar se deu certo
             char** temp = realloc(expressoes, tamanhoVetorExpressoes * sizeof(char*));
-            if(temp == NULL)
+            if (temp == NULL)
             {
                 perror("Erro de alocacao");
                 exit(EXIT_FAILURE);
             }
 
-            // novo vetor de expressoes
             expressoes = temp;
         }
 
-        // copia do arquivo para o vetor de strings
+        // remove o '\n' do buffer
+        bufferLinha[strcspn(bufferLinha, "\n")] = 0;
+
+        // copia o buffer para o vetor de linhas
         expressoes[contagemLinhas] = strdup(bufferLinha);
+    
 
         contagemLinhas++;
+    }
 
-    } while (tamanhoLinha >= 0); // geline() retorna -1 quando terminar o arquivo
-
-    // corrige o valor pois a ultima linha lida eh vazia
-    contagemLinhas--;
-
+    // libera o buffer de leitura do arquivo
     free(bufferLinha);
 
-    if (fclose(arquivoEntrada);
+    // fecha o arquivo e checa por erros
+    if (fclose(arquivoEntrada))
+    {
+        perror(nomeArquivoEntrada);
+        exit(EXIT_FAILURE);
+    }
 
     // retorna o ponteiro
     *linhas = expressoes;
 
+    // retorna o numero de linhas
     return contagemLinhas;
 }
+
