@@ -3,26 +3,51 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
+
+// variavel que representa o dado que fica armazenado em cada no
+union simboloMatematico
+{
+    int numero;
+    char operador;
+};
+
+typedef union simboloMatematico simbolo;
 
 struct arvore
 {
-    char simbolo;
-    Arvore* sae; // sub-arvore esquerda
-    Arvore* sad; // sub-arvore direita
+    simbolo elemento;
+    Arvore* esquerda; // sub-arvore esquerda
+    Arvore* direita; // sub-arvore direita
 };
+
+// funcoes auxiliares
+static int achaPosicaoOperador(char* expressao);
+static char* retiraParentesesExternos(char* expressao);
 
 Arvore* criaArvoreVazia(void)
 {
     return NULL;
 }
 
-Arvore* criaArvore(char simbolo, Arvore* esquerda, Arvore* direita)
+Arvore* criaNoFolha(int numero)
 {
     Arvore* arvore = (Arvore*) malloc(sizeof(Arvore));
 
-    arvore->simbolo = simbolo;
-    arvore->sae = esquerda;
-    arvore->sad = direita;
+    arvore->elemento.numero = numero;
+    arvore->esquerda = NULL;
+    arvore->direita = NULL;
+
+    return arvore;
+}
+
+Arvore* criaArvoreComFilhos(char operador, Arvore* esquerda, Arvore* direita)
+{
+    Arvore* arvore = (Arvore*) malloc(sizeof(Arvore));
+
+    arvore->elemento.operador = operador;
+    arvore->direita = direita;
+    arvore->esquerda = esquerda;
 
     return arvore;
 }
@@ -34,88 +59,124 @@ int ArvoreVazia(Arvore* arvore)
     return 0;
 }
 
-int pertenceArvore(Arvore* arvore, char simbolo)
+int ArvoreEhNo(Arvore* arvore)
 {
-    if (ArvoreVazia(arvore))
-        return 0;
-
-    return  (arvore->simbolo == simbolo) ||
-            pertenceArvore(arvore->sae, simbolo) || 
-            pertenceArvore(arvore->sad, simbolo);
-}
-
-int folhas(Arvore* arvore)
-{
-    if (ArvoreVazia(arvore))
-        return 0;
-
-    return 1 + folhas(arvore->sae) + folhas(arvore->sad);
-}
-
-int ocorrencias(Arvore* arvore, char simbolo)
-{
-    // fim da arvore
-    if (ArvoreVazia(arvore))
-        return 0;
-
-    // conta um caso tenha o nome
-    if (arvore->simbolo == simbolo)
-        return 1 + ocorrencias(arvore->sae, simbolo) + ocorrencias(arvore->sad, simbolo);
-
-    // conta zero caso n tenha o nome
-    return ocorrencias(arvore->sae, simbolo) + ocorrencias(arvore->sad, simbolo);
-}
-
-int altura(Arvore* arvore)
-{
-    if (ArvoreVazia(arvore))
-        return -1;
-    
-    if (altura(arvore->sae) > altura(arvore->sad))
-        return 1 + altura(arvore->sae);
-    else
-        return 1 + altura(arvore->sad);
-    
-
+    if(arvore->esquerda == NULL && arvore->direita == NULL)
+        return 1;
+    return 0;
 }
 
 void imprimeArvore(Arvore* arvore)
 {
-    putchar('<');
+    putchar('(');
 
     if (!ArvoreVazia(arvore))
     {
-        putchar(arvore->simbolo);
-        imprimeArvore(arvore->sae);
-        imprimeArvore(arvore->sad);
+        if(ArvoreEhNo(arvore))
+            printf("%d", arvore->elemento.numero);
+        else
+        {
+            imprimeArvore(arvore->esquerda);
+            putchar(arvore->elemento.operador);
+            imprimeArvore(arvore->direita);
+        }
     }
 
-    printf("> ");
+    putchar(')');
+}
+
+int calculaExpressao(Arvore* arvore)
+{
+    // no folha, retorna o numero
+    if(ArvoreEhNo(arvore))
+        return arvore->elemento.numero;
+
+    // no com filhos retorna a operacao a ser feita nos dois filhos
+    switch (arvore->elemento.operador)
+    {
+        case '+':
+            return  calculaExpressao(arvore->esquerda) +
+                    calculaExpressao(arvore->direita);
+            break;
+        case '-':
+            return  calculaExpressao(arvore->esquerda) -
+                    calculaExpressao(arvore->direita);
+            break;
+        case '*':
+            return  calculaExpressao(arvore->esquerda) *
+                    calculaExpressao(arvore->direita);
+            break;
+        case '/':
+            return  calculaExpressao(arvore->esquerda) /
+                    calculaExpressao(arvore->direita);
+            break;
+        default:
+            break;
+    }
 }
 
 void destroiArvore(Arvore* arvore)
 {
     if (!ArvoreVazia(arvore))
     {
-        destroiArvore(arvore->sae);
-        destroiArvore(arvore->sad);
+        destroiArvore(arvore->esquerda);
+        destroiArvore(arvore->direita);
         free(arvore);
     }
 }
 
-char* parsing(char* expressao)
+// cria a arvore atraves de texto
+Arvore* parsing(char* expressao)
 {
-    printf("%s\n", expressao);
-    
     expressao = retiraParentesesExternos(expressao);
-    printf("%s\n", expressao);
+    int posicaoOperador = achaPosicaoOperador(expressao);
 
-    int a = achaPosicaoOperador(expressao);
+    // nao achou operador, no folha contendo numero
+    if (posicaoOperador == -1)
+    {
+        expressao = retiraParentesesExternos(expressao);
+        int numero = atoi(expressao);
+        return criaNoFolha(numero);
+    }
+    // achou operador, o no contem 2 filhos (somente operacoes binarias)
+    else
+    {
+        char* expressaoArvoreEsquerda;
+        char* expressaoArvoreDireita;
+        char operador;
+
+        // copia o char que representa a operacao
+        operador = expressao[posicaoOperador];
+
+        // restante da string depois do operador matematico
+        expressaoArvoreDireita = &expressao[posicaoOperador + 1];
+
+        // substitui o caractere do operador por um \0
+        expressao[posicaoOperador] = '\0';
+        expressaoArvoreEsquerda = expressao;
+
+        /*  exemplo do que foi feito:
+            "(((47)-(7))*(2))-(3)\0"
+             ^               ^
+        expressao     posicaoOperador
+            
+            "(((47)-(7))*(2))\0(3)\0"
+             ^                 ^
+        arvEsquerda        arvDireita
+
+            a string foi separada em duas usando o \0 como separador
+        */
+
+       // chama recursivamente a funcao parsing()
+        return criaArvoreComFilhos( operador,
+                                    parsing(expressaoArvoreEsquerda),
+                                    parsing(expressaoArvoreDireita));
+    }
 }
 
-// funcao que retira o primeiro ou  oultimo caractere (ou ambos) somente
+// funcao que retira o primeiro ou  ou ultimo caractere (ou ambos) somente
 // se os respectivos caracteres forem parenteses
-char* retiraParentesesExternos(char* expressao)
+static char* retiraParentesesExternos(char* expressao)
 {
     if (expressao == NULL)
         return NULL;
@@ -127,7 +188,9 @@ char* retiraParentesesExternos(char* expressao)
 
     // retira o ultimo parentese
     if(expressao[tamanho - 1] == ')')
+    {
         expressao[tamanho - 1] = '\0';
+    }
 
     if(expressao[0] == '(')
         // a string nao eh modificada apenas o ponteiro.
@@ -138,21 +201,32 @@ char* retiraParentesesExternos(char* expressao)
     return expressao;
 }
 
-int achaPosicaoOperador(char* expressao)
+// funcao que acha a posicao do operador (+, -, *, /) na string
+static int achaPosicaoOperador(char* expressao)
 {
     // o operador atual eh operador que nao esta dentro de nehnum parentese
     // (porque a funcao retiraParentesesExternos() foi aplicada antes)
+    // ou seja, quando nivelParentese = 0
     
     int nivelParentese = 0;
+    int posicaoOperador = -1; // valor retornado quando n acha operador
 
     for(int i = 0; expressao[i] != '\0'; i++)
     {
-        printf("%c", expressao[i]);
+        //printf("%c", expressao[i]);
         if(expressao[i] == '(')
             nivelParentese++;
-        else if(expressao[i] == ')')
+        else if (expressao[i] == ')')
             nivelParentese--;
-        
-        printf("");
+        else if (nivelParentese <= 0)
+        {
+            if (expressao[i] == '+' || expressao[i] == '-' ||
+                expressao[i] == '*' || expressao[i] == '/')
+            {
+                posicaoOperador = i;
+            }
+        }
     }
+
+    return posicaoOperador;
 }
